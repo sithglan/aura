@@ -1176,6 +1176,9 @@ static void s2r_hook_full(void)
         for (unsigned i = 0; i < ARRAY_SIZE(mb); i++)
             s2r_hook_adt(mb[i].path, 0, mb[i].what, 0x8000, 0x4000);
     }
+    /* 8: the SEP's mailbox too (J813: what macOS 27.2 asks the enclave before a sleep) */
+    if (sptm_virt_s2r_extra & 8)
+        s2r_hook_adt("/arm-io/sep", 0, "sep-mbox", 0x8000, 0x4000);
 }
 
 /* ---- T6050: the coprocessors and the memory side ---------------------------------------------
@@ -1478,7 +1481,7 @@ void sptm_virt_s2r_setup(bool cdc)
     /* A timer-only sleep has no stop before the commit to read a ring from: keep it all. */
     /* With AURA_S2R_GO_COUNT the ring must hold a sleep, its wake and the next entry. */
     u64 ring_bytes = s2r_soc->timer_only         ? S2R_RING_BYTES_BIG
-                     : sptm_virt_s2r_go_count ? (48UL << 20)
+                     : (sptm_virt_s2r_go_count || (sptm_virt_s2r_extra & 8)) ? (48UL << 20)
                                               : S2R_RING_BYTES;
     if (!s2r_ring_alloc(ring_bytes)) {
         printf("SPTM-virt[s2r]: no memory for the ring; sleep path off\n");
